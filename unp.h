@@ -18,3 +18,5 @@
 #define	SA	struct sockaddr
 void str_cli(FILE *,int);
 void str_echo(int);
+void mainMenu(FILE *,int);
+void serverMenu(int);
