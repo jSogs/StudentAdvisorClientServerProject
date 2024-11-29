@@ -7,6 +7,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/builder/stream/array.hpp>
+
 using namespace std;
 
 vector<string> split(const string&, const string&);
@@ -81,6 +82,41 @@ void handleSignup(const vector<string> &parts, int sockfd){
 }
 
 void handleLogin(const vector<string> &parts, int sockfd){
+	string role = parts[1];
+	string username = parts[2];
+	string password = parts[3];
+
+	// search if account exist
+	try {
+	// connect to MongoDB
+		mongocxx::instance instance{};
+		mongocxx::uri uri("mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
+		mongocxx::client client{uri};
+
+		auto database = client["main"];          // Access the database
+		auto collection = database["users"];    // Access a collection
+
+		auto result = collection.find_one(bsoncxx::builder::basic::make_document(bsoncxx::builder::basic::kvp("username", username)));
+		//if username exist
+		if(result) {
+			auto doc = *result;
+            string stored_password = doc["password"].get_string().value.to_string();
+
+            // Compare passwords
+            if (stored_password == password) { // Replace with actual hash comparison logic
+				string resString = "SUCCESS|"+username+" is a valid account. Login successful.\n";
+				const char* res = resString.c_str();
+                write(sockfd, res, strlen(res));
+            } else {
+				string resString = "FAILURE|Failed to sign in. Try again.";
+				const char* res = resString.c_str();
+                write(sockfd, res, strlen(res));
+            }
+		}
+	}
+	catch (const std::exception& e) {
+		cout << "Account does not exist\n";
+	}
 
 }
 

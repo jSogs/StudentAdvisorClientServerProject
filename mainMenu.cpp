@@ -25,31 +25,23 @@ void mainMenu(FILE *fp, int sockfd){
 	if(option==2){
 		studentSignup(sockfd);
 	} else{
-		fputs("You can login", stdout);
+		fputs("You can login\n", stdout);
 	}
 	studentLogin(sockfd);
-	/*fputs("What would you like to do?\n1. Login as a student\n2.Sign up as a student\n",stdout);
-	fgets(choice, sizeof(choice), fp);
-	choice[strlen(choice)-1] = 0;
-	int option = atoi(choice);
-	switch(option) {
-		case 1: studentLogin(sockfd); break;
-		case 2: studentSignup(sockfd); break;
-		default: cout << "Invalid option.\n"; break;
-	}*/
-	fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit",stdout);
 
-	while (fgets(choice, sizeof(choice), fp) != NULL) { //get input from keyboard
+	while (fgets(choice, sizeof(choice), fp) != NULL) { 
+		fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n",stdout);
+		fgets(choice, sizeof(choice), fp);
 		choice[strlen(choice)-1] = 0;
 		option = atoi(choice);
 		switch(option) {
 			case 1: registerClasses(); break;
 			case 2: checkGrades(); break;
 			case 3: payBills(); break;
-			case 4: exit(0);
+			case 4: exit(0); break;
 			default: cout << "Invalid option.\n"; break;
 		}
-		fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit",stdout);
+		
 	}
 }
 
@@ -107,7 +99,9 @@ void studentLogin(int sockfd){
 		string resString(res);
 		vector<string> parts = split(resString,"|");
 		string signin = parts[0];
-		string msg = parts[1];
+
+		string msg = parts[1]; // store username
+
 		if(signin == "SUCCESS"){
 			signedIn = true;
 			cout<<msg<<endl;
