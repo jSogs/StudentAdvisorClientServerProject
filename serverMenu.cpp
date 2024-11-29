@@ -103,12 +103,13 @@ void handleLogin(const vector<string> &parts, int sockfd){
             string stored_password = doc["password"].get_string().value.to_string();
 
             // Compare passwords
-            if (stored_password == password) { // Replace with actual hash comparison logic
-				string resString = "SUCCESS|"+username+" is a valid account. Login successful.\n";
+            if (stored_password == password) {
+				string full_name = doc["full_name"].get_string().value.to_string();
+				string resString = "SUCCESS|" + full_name + "|Welcome " + username + ". Login successful.\n";
 				const char* res = resString.c_str();
                 write(sockfd, res, strlen(res));
             } else {
-				string resString = "FAILURE|Failed to sign in. Try again.";
+				string resString = "FAILURE|null|Failed to sign in. Try again.";
 				const char* res = resString.c_str();
                 write(sockfd, res, strlen(res));
             }

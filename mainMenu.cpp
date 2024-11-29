@@ -100,7 +100,9 @@ void studentLogin(int sockfd){
 		vector<string> parts = split(resString,"|");
 		string signin = parts[0];
 
-		string msg = parts[1]; // store username
+		string msg = parts[2]; // store msg from server
+		string full_name = parts[1]; // store user full_name after successfully login
+		cout << full_name << endl;
 
 		if(signin == "SUCCESS"){
 			signedIn = true;
