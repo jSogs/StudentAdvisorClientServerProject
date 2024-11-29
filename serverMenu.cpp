@@ -8,6 +8,7 @@
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/builder/stream/array.hpp>
 
+const string MONGODB_CONNECTION_STRING = "mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 using namespace std;
 
 vector<string> split(const string&, const string&);
@@ -49,7 +50,7 @@ void handleSignup(const vector<string> &parts, int sockfd){
 	string full_name = parts[4];
 
     mongocxx::instance instance{};
-	mongocxx::uri uri("mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
+	mongocxx::uri uri(MONGODB_CONNECTION_STRING);
 	mongocxx::client client{uri}; // Connect to MongoDB
 	
 	auto database = client["main"];          // Access the database
@@ -90,7 +91,7 @@ void handleLogin(const vector<string> &parts, int sockfd){
 	try {
 	// connect to MongoDB
 		mongocxx::instance instance{};
-		mongocxx::uri uri("mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
+		mongocxx::uri uri(MONGODB_CONNECTION_STRING);
 		mongocxx::client client{uri};
 
 		auto database = client["main"];          // Access the database
@@ -118,7 +119,6 @@ void handleLogin(const vector<string> &parts, int sockfd){
 	catch (const std::exception& e) {
 		cout << "Account does not exist\n";
 	}
-
 }
 
 void handleRegisterClasses(const vector<string> &parts, int sockfd){
