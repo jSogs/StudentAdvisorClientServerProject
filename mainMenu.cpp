@@ -84,7 +84,7 @@ void studentLogin(int sockfd){
 	bool signedIn = false;
 	do
 	{
-		char* res;
+		char res[MAXLINE];
 		cout << "Enter username: ";
 		cin >> username;
 		cout <<"Enter password: ";
