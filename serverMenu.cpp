@@ -8,8 +8,10 @@
 #include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/builder/stream/array.hpp>
 
-const string MONGODB_CONNECTION_STRING = "mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 using namespace std;
+
+mongocxx::instance instance{}; //Mongodb singleton instance
+const string MONGODB_CONNECTION_STRING = "mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 vector<string> split(const string&, const string&);
 void handleSignup(const vector<string>&, int);
@@ -24,7 +26,7 @@ void serverMenu(int sockfd){
 	char req[MAXLINE];
 again:
 	while ( (n = read(sockfd, req, MAXLINE)) > 0){ //read data from socket
-        fputs(req, stdout);
+        cout<<req<<endl;
 		string request(req);
         vector<string> parts = split(request,"|");
 		string requestType = parts[0];
@@ -33,6 +35,7 @@ again:
 		else if(requestType == "GRADES") handleCheckGrades(parts,sockfd);
 		else if(requestType == "CLASSES") handleRegisterClasses(parts,sockfd);
 		else if(requestType == "BILL") handlePayBill(parts,sockfd);
+		memset(req, 0, MAXLINE);
 	}
 
 	if (n < 0 && errno == EINTR) //if process is interrupted retry
@@ -49,7 +52,6 @@ void handleSignup(const vector<string> &parts, int sockfd){
 	string password = parts[3];
 	string full_name = parts[4];
 
-    mongocxx::instance instance{};
 	mongocxx::uri uri(MONGODB_CONNECTION_STRING);
 	mongocxx::client client{uri}; // Connect to MongoDB
 	
@@ -89,8 +91,7 @@ void handleLogin(const vector<string> &parts, int sockfd){
 
 	// search if account exist
 	try {
-	// connect to MongoDB
-		mongocxx::instance instance{};
+		// connect to MongoDB
 		mongocxx::uri uri(MONGODB_CONNECTION_STRING);
 		mongocxx::client client{uri};
 
@@ -122,7 +123,85 @@ void handleLogin(const vector<string> &parts, int sockfd){
 }
 
 void handleRegisterClasses(const vector<string> &parts, int sockfd){
+	ssize_t	n;
+	string username = parts[1];
+	char req[MAXLINE];
+	string classListStr = "MATH 2215|GEOG 3003|CHEM 1113|CS 2413|CS 2513|CS 3013|BIO 2113|MATH 3013|HIST 1495|SOCI 1003";
+	const char* classList = classListStr.c_str();
+	vector<string> classes = split(classListStr,"|");
+	write(sockfd, classList, strlen(classList));
+	while((n = read(sockfd, req, MAXLINE)) <= 0){ //read from socket
+		if (n < 0 && errno == EINTR) //if process is interrupted retry
+			continue;
+		else if (n < 0){
+			printf("server: read error");
+			exit(1);
+		}
+	}
+	string classChoices(req);
+	vector<string> choices = split(classChoices," ");
+	cout<<req<<endl;
 
+	mongocxx::uri uri(MONGODB_CONNECTION_STRING);
+	mongocxx::client client{uri}; // Connect to MongoDB
+	
+	auto database = client["main"];          // Access the database
+	auto collection = database["users"];    // Access a collection
+
+	cout << "\nSuccessfully connected to MongoDB!" << endl;
+
+	// Filter to find the user
+    bsoncxx::builder::stream::document filter_builder{};
+    filter_builder << "username" << username;
+
+	// Create the array of classes to push
+	bsoncxx::builder::basic::array class_array;
+
+	for (int i = 0; i < choices.size(); i++) {
+		int choice = atoi(choices[i].c_str());
+		class_array.append(bsoncxx::builder::basic::make_document(
+			bsoncxx::builder::basic::kvp("name", classes[choice - 1])
+		));
+		std::cout << "Added to class_array: { \"name\": \"" << classes[choice - 1] << "\" }" << std::endl;
+	}
+
+	// Print the array
+	std::cout << "Final Class Array: " << bsoncxx::to_json(class_array.view()) << std::endl;
+
+
+	// Build the update document
+    bsoncxx::builder::stream::document update_builder{};
+    update_builder << "$push" << bsoncxx::builder::stream::open_document
+                   << "classes" << bsoncxx::builder::stream::open_document
+                   << "$each" << class_array.view()
+                   << bsoncxx::builder::stream::close_document
+                   << bsoncxx::builder::stream::close_document;
+
+	std::cout << "Update Query: " << bsoncxx::to_json(update_builder.view()) << std::endl;
+
+	try {
+        auto result = collection.update_one(filter_builder.view(), update_builder.view());
+        if (result && result->modified_count() > 0) {
+            cout << "Classes added successfully." << std::endl;
+			string resString="SUCCESS|You have successfully registered for: \n";
+			for (int i = 0; i < choices.size(); i++) {
+				int choice = atoi(choices[i].c_str());
+				resString+=classes[choice-1]+"\n";
+			}
+			const char* res = resString.c_str();
+			write(sockfd, res, strlen(res));
+        } else {
+			string resString="FAILURE|Failed to register for classes. Try again.";
+			const char* res = resString.c_str();
+			write(sockfd, res, strlen(res));
+            cout << "No documents updated." << std::endl;
+        }
+    } catch (const std::exception& e) {
+		string resString="FAILURE|Failed to register for classes. Try again.";
+		const char* res = resString.c_str();
+		write(sockfd, res, strlen(res));
+        cerr << "Update error: " << e.what() << std::endl;
+    }
 }
 
 void handleCheckGrades(const vector<string> &parts, int sockfd){

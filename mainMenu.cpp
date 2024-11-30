@@ -9,7 +9,7 @@ using namespace std;
 void studentLogin(int);
 void studentSignup(int);
 void checkGrades();
-void registerClasses();
+void registerClasses(int);
 void payBills();
 
 vector<string> split(const string&, const string&);
@@ -29,23 +29,25 @@ void mainMenu(FILE *fp, int sockfd){
 	}
 	studentLogin(sockfd);
 
+	fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n",stdout);
+
 	while (fgets(choice, sizeof(choice), fp) != NULL) { 
-		fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n",stdout);
 		fgets(choice, sizeof(choice), fp);
 		choice[strlen(choice)-1] = 0;
 		option = atoi(choice);
 		switch(option) {
-			case 1: registerClasses(); break;
+			case 1: registerClasses(sockfd); break;
 			case 2: checkGrades(); break;
 			case 3: payBills(); break;
 			case 4: exit(0); break;
 			default: cout << "Invalid option.\n"; break;
 		}
-		
+		fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n",stdout);
 	}
 }
 
 void studentSignup(int sockfd){
+	fputs("Signup\n", stdout);
 	bool signedUp = false;
 	do
 	{
@@ -101,9 +103,7 @@ void studentLogin(int sockfd){
 		string signin = parts[0];
 
 		string msg = parts[2]; // store msg from server
-		string full_name = parts[1]; // store user full_name after successfully login
-		cout << full_name << endl;
-
+		fullname = parts[1]; // store user full_name after successfully login
 		if(signin == "SUCCESS"){
 			signedIn = true;
 			cout<<msg<<endl;
@@ -118,8 +118,46 @@ void checkGrades(){
 
 }
 
-void registerClasses(){
-
+void registerClasses(int sockfd){
+	bool hasRegistered = false;
+	do
+	{
+		const char* req;
+		char res[MAXLINE];
+		char choices[21];
+		string reqString = "CLASSES|"+username;
+		req = reqString.c_str();
+		write(sockfd, req, strlen(req));
+		if (read(sockfd, res, MAXLINE) == 0){ //read from socket
+			printf("str_cli: server terminated prematurely");
+			exit(1);
+		}
+		string resString(res);
+		vector<string> classes = split(resString,"|");
+		fputs("Available classes: ",stdout);
+		for(int i=0; i<classes.size(); i++){
+			cout<<i+1<<". "<<classes[i]<<"\t";
+		}
+		cout<<"\nEnter the number (1-10) and a space between each class you want to register for: ";
+		fgets(choices,sizeof(choices),stdin);
+		write(sockfd, choices, strlen(choices));
+		memset(res, 0, MAXLINE);
+		if (read(sockfd, res, MAXLINE) == 0){ //read from socket
+			printf("str_cli: server terminated prematurely");
+			exit(1);
+		}
+		resString = *(new string(res));
+		vector<string> parts = split(resString,"|");
+		string signup = parts[0];
+		string msg = parts[1];
+		if(signup == "SUCCESS"){
+			hasRegistered = true;
+			cout<<msg<<endl;
+		} else {
+			cout<<msg<<endl;
+			continue;
+		}
+	} while (!hasRegistered);
 }
 
 void payBills(){
