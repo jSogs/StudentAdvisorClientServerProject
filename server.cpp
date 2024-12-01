@@ -39,25 +39,3 @@ int main(int argc, char**argv){
         wait(NULL);
     }
 }
-
-void connect_db(){
-    mongocxx::instance instance{};
-    try {
-        // Custom connection URI
-        mongocxx::uri uri("mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
-        mongocxx::client client{uri}; // Connect to MongoDB
-        
-        auto database = client["main"];          // Access the database
-        auto collection = database["users"];    // Access a collection
-
-        std::cout << "Successfully connected to MongoDB!" << std::endl;
-
-        // Perform operations like find or insert (example)
-        auto cursor = collection.find({});
-        for (auto&& doc : cursor) {
-            std::cout << bsoncxx::to_json(doc) << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Connection error: " << e.what() << std::endl;
-    }
-}
