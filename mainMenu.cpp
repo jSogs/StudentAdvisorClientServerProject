@@ -1,8 +1,4 @@
 #include "unp.h"
-#include <stdio.h>
-#include <string>
-#include <iostream>
-#include <vector>
 
 using namespace std;
 
@@ -12,7 +8,6 @@ void checkGrades(int);
 void registerClasses(int);
 void payBills();
 
-vector<string> split(const string&, const string&);
 string username, password, fullname;
 
 void mainMenu(FILE *fp, int sockfd){
@@ -188,18 +183,4 @@ void registerClasses(int sockfd){
 
 void payBills(){
 
-}
-
-vector<string> split(const string& str, const string& delimiter){
-    vector<string> tokens;
-	string::size_type start = 0;
-	string:: size_type end = str.find(delimiter);
-
-	while(end!= string::npos){
-		tokens.push_back(str.substr(start, end-start));
-		start = end + delimiter.length();
-		end = str.find(delimiter, start);
-	}
-	tokens.push_back(str.substr(start));
-	return tokens;
 }
