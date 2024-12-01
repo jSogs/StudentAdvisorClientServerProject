@@ -8,7 +8,7 @@ using namespace std;
 
 void studentLogin(int);
 void studentSignup(int);
-void checkGrades();
+void checkGrades(int);
 void registerClasses(int);
 void payBills();
 
@@ -20,7 +20,7 @@ void mainMenu(FILE *fp, int sockfd){
 	char choice[5];
 	fputs("Do you have an account?\n1. Yes\n2. No\n",stdout);
 	fgets(choice, sizeof(choice), fp);
-	choice[strlen(choice)-1] = 0;
+	choice[strlen(choice)-1] = '\0';
 	int option = atoi(choice);
 	if(option==2){
 		studentSignup(sockfd);
@@ -30,16 +30,15 @@ void mainMenu(FILE *fp, int sockfd){
 	studentLogin(sockfd);
 
 	fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n",stdout);
-
-	while (fgets(choice, sizeof(choice), fp) != NULL) { 
-		fgets(choice, sizeof(choice), fp);
-		choice[strlen(choice)-1] = 0;
+	
+	while (fgets(choice, sizeof(choice), fp) != NULL) {
+		choice[strlen(choice)-1] = '\0';
 		option = atoi(choice);
 		switch(option) {
 			case 1: registerClasses(sockfd); break;
-			case 2: checkGrades(); break;
+			case 2: checkGrades(sockfd); break;
 			case 3: payBills(); break;
-			case 4: exit(0); break;
+			case 4: exit(0);
 			default: cout << "Invalid option.\n"; break;
 		}
 		fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n",stdout);
@@ -63,6 +62,7 @@ void studentSignup(int sockfd){
 		string req = "SIGNUP|student|"+user_name+"|"+pass_word+"|"+full_name;
 		const char* sendReq = req.c_str();
 		write(sockfd, sendReq, strlen(sendReq));
+		memset(res, 0, MAXLINE);
 		if (read(sockfd, res, MAXLINE) == 0){ //read from socket
 			printf("str_cli: server terminated prematurely");
 			exit(1);
@@ -92,8 +92,10 @@ void studentLogin(int sockfd){
 		cout <<"Enter password: ";
 		cin >> password;
 		string req = "LOGIN|student|"+username+"|"+password;
+		cin.ignore();
 		const char* sendReq = req.c_str();
 		write(sockfd, sendReq, strlen(sendReq));
+		memset(res, 0, MAXLINE);
 		if (read(sockfd, res, MAXLINE) == 0){ //read from socket
 			printf("str_cli: server terminated prematurely");
 			exit(1);
@@ -114,8 +116,32 @@ void studentLogin(int sockfd){
 	} while (!signedIn);
 }
 
-void checkGrades(){
-
+void checkGrades(int sockfd){
+	bool hasChecked = false;
+	do{
+		const char* req;
+		char res[MAXLINE];
+		string reqString = "GRADES|"+username;
+		req = reqString.c_str();
+		write(sockfd, req, strlen(req));
+		memset(res, 0, MAXLINE);
+		if (read(sockfd, res, MAXLINE) == 0){ //read from socket
+			printf("str_cli: server terminated prematurely");
+			exit(1);
+		}
+		string resString(res);
+		resString = *(new string(res));
+		vector<string> parts = split(resString,"|");
+		string signup = parts[0];
+		string msg = parts[1];
+		if(signup == "SUCCESS"){
+			hasChecked = true;
+			cout<<msg<<endl;
+		} else {
+			cout<<msg<<endl;
+			continue;
+		}
+	} while(!hasChecked);
 }
 
 void registerClasses(int sockfd){
