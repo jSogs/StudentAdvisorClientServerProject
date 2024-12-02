@@ -6,7 +6,7 @@ void studentLogin(int);
 void studentSignup(int);
 void checkGrades(int);
 void registerClasses(int);
-void payBills();
+void payBills(int);
 
 string username, password, fullname;
 
@@ -43,7 +43,7 @@ void mainMenu(FILE *fp, int sockfd)
 			checkGrades(sockfd);
 			break;
 		case 3:
-			payBills();
+			payBills(sockfd);
 			break;
 		case 4:
 			exit(0);
@@ -218,6 +218,46 @@ void registerClasses(int sockfd)
 	} while (!hasRegistered);
 }
 
-void payBills()
+void payBills(int sockfd)
 {
+		const char * req;
+		char res[MAXLINE];
+		string reqString = "BILL|" + username;
+		req = reqString.c_str();
+		write(sockfd, req, strlen(req));
+		if (read(sockfd, res, MAXLINE) == 0)
+		{ // read from socket
+			printf("str_cli: server terminated prematurely");
+			exit(1);
+		}
+		string resString(res);
+		vector<string> parts = split(resString, "|");
+		if(parts[0] == "FAILURE") {
+			cout << parts[1];
+			return;
+		}
+
+		// print the amount send by the server
+		cout << resString;
+
+		// take input for how much user want to pay
+		cin >> reqString;
+		req = reqString.c_str();
+		write(sockfd, req, strlen(req));
+
+		// check if pay is success
+		if (read(sockfd, res, MAXLINE) == 0)
+		{ // read from socket
+			printf("str_cli: server terminated prematurely");
+			exit(1);
+		}
+		resString = res;
+		parts = split(resString, "|");
+		if(parts[0] == "FAILURE") {
+			cout << parts[1];
+			return;
+		}
+		else {
+			cout << parts[1];
+		}
 }

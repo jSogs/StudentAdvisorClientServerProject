@@ -74,6 +74,7 @@ void handleSignup(const vector<string> &parts, int sockfd)
 			 << "username" << username
 			 << "password" << password
 			 << "full_name" << full_name
+			 << "bill" << 0
 			 << "classes" << bsoncxx::builder::stream::array{};
 
 	try
@@ -375,4 +376,84 @@ void handleCheckGrades(const vector<string> &parts, int sockfd)
 
 void handlePayBill(const vector<string> &parts, int sockfd)
 {
+	string username = parts[1];
+
+	// Search if account exist
+	try
+	{
+		// Connect to MongoDB
+		mongocxx::uri uri(MONGODB_CONNECTION_STRING);
+		mongocxx::client client{uri};
+
+		auto database = client["main"];		 // Access the database
+		auto collection = database["users"]; // Access a collection
+
+		auto result = collection.find_one(bsoncxx::builder::basic::make_document(
+			bsoncxx::builder::basic::kvp("username", username)));
+
+		// If username exists
+		if (result)
+		{
+			// send amount remaining to user
+			auto doc = *result;
+			int bill = doc["bill"].get_int32().value;
+			string resString = "Amount Remaining: " + to_string(bill) + "\nHow much do you want to pay?\n";
+			const char *res = resString.c_str();
+			write(sockfd, res, strlen(res));
+
+			// read how much user want to pay
+			char res2[MAXLINE];
+			if (read(sockfd, res2, MAXLINE) == 0)
+			{ // read from socket
+				printf("str_cli: server terminated prematurely");
+				exit(1);
+			}
+
+			// Subtract the remain from how much user want to pay
+			string amountPay(res2);
+			bill = bill - stoi(amountPay);
+
+			
+			// Filter to find the user
+			bsoncxx::builder::stream::document filter_builder{};
+			filter_builder << "username" << username;
+
+			bsoncxx::builder::stream::document update_builder{};
+			update_builder << "$set" << bsoncxx::builder::stream::open_document
+				   << "bill" << bill
+				   << bsoncxx::builder::stream::close_document;
+
+			// Update the bill for the user after pay
+			try {
+				auto result2 = collection.update_one(filter_builder.view(), update_builder.view());
+				if (result2) {
+					string resString = "SUCCESS|Pay completed.\n";
+					const char *res = resString.c_str();
+					write(sockfd, res, strlen(res));
+					cout << "Update Bill Amount successful.\n";
+				} 
+				else {
+					string resString = "FAILURE|Pay failed.\n";
+					const char *res = resString.c_str();
+					write(sockfd, res, strlen(res));
+					cout << "Update operation failed.\n";
+				}
+			}
+			catch (const std::exception &e)
+			{
+				// If any error, send FAILURE response to the client
+				string resString = "FAILURE|Pay failed.\n";
+				const char *res = resString.c_str();
+				write(sockfd, res, strlen(res));
+				cout << "Update operation failed.\n";
+			}
+		}
+	}
+	catch (const std::exception &e)
+	{
+		string resString = "FAILURE|Account does not exist.\n";
+		const char *res = resString.c_str();
+		write(sockfd, res, strlen(res));
+		cout << "Account does not exist\n";
+	}
 }
