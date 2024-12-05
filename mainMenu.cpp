@@ -24,7 +24,7 @@ void mainMenu(FILE *fp, int sockfd)
 	}
 	else
 	{
-		fputs("You can login\n", stdout);
+		fputs("\nYou can login\n", stdout);
 	}
 	studentLogin(sockfd);
 
@@ -220,6 +220,8 @@ void registerClasses(int sockfd)
 
 void payBills(int sockfd)
 {
+	bool hasPay = false;
+	do {
 		const char * req;
 		char res[MAXLINE];
 		string reqString = "BILL|" + username;
@@ -244,8 +246,10 @@ void payBills(int sockfd)
 		cin >> reqString;
 		req = reqString.c_str();
 		write(sockfd, req, strlen(req));
+		cin.ignore();
 
 		// check if pay is success
+		memset(res, 0, MAXLINE); // clear buffer
 		if (read(sockfd, res, MAXLINE) == 0)
 		{ // read from socket
 			printf("str_cli: server terminated prematurely");
@@ -254,10 +258,12 @@ void payBills(int sockfd)
 		resString = res;
 		parts = split(resString, "|");
 		if(parts[0] == "FAILURE") {
-			cout << parts[1];
+			cout << parts[1] << endl;
 			return;
 		}
 		else {
-			cout << parts[1];
+			hasPay = true;
+			cout << parts[1] << endl;
 		}
+	} while(!hasPay);
 }
