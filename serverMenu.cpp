@@ -15,6 +15,7 @@ void handleLogin(const vector<string> &, int);
 void handleRegisterClasses(const vector<string> &, int);
 void handleCheckGrades(const vector<string> &, int);
 void handlePayBill(const vector<string> &, int);
+void handleShowClasses(const vector<string> &, int);
 
 void serverMenu(int sockfd)
 {
@@ -39,6 +40,7 @@ again:
 			handleRegisterClasses(parts, sockfd);
 		else if (requestType == "BILL")
 			handlePayBill(parts, sockfd);
+		else if (requestType == "");
 		memset(req, 0, MAXLINE);
 	}
 
@@ -456,4 +458,65 @@ void handlePayBill(const vector<string> &parts, int sockfd)
 		write(sockfd, res, strlen(res));
 		cout << "Account does not exist\n";
 	}
+}
+
+void handleShowClasses(const vector<string> &, int)
+{
+	string username = parts[1]; // Get username
+	string resString = "";
+
+	// Connect to MongoDB
+	mongocxx::uri uri(MONGODB_CONNECTION_STRING);
+	mongocxx::client client{uri};
+
+	auto database = client["main"];         // Access the database
+    auto collection = database["users"];   // Access the collection
+
+	cout << "\nSuccessfully connected to MongoDB!" << endl;
+
+	// FIlter to find the user
+	bsoncxx::builder::stream::document filter_builder{};
+	filter_builder << "username" << username;
+
+	try
+	{
+		auto result = collection.find_one(filter_builder.view());
+
+		if (result)
+		{
+			auto doc = *result;
+
+			if (doc["classes"])		// Checks whether the user has any classes registered
+			{
+				auto classes_array = doc["classes"].get_array().value;
+				resString = "SUCCESS|Here are your classes:\n";
+
+				for(const auto &class_doc : classes_array)
+				{
+					string class_name = class_doc["name"].get_string().value.to_string();
+					resString += "- " + class_name + "\n";
+				}
+
+			}
+			else
+			{
+
+				resString = "SUCCESS|You have not registered for any classes.\n";
+
+			}
+		}
+		else
+		{
+			resString = "FAILURE|USer not found.\n";
+		}
+	}
+	catch(const std::exception& e)
+	{
+		// Send FAILURE response to client
+		resString = "FAILURE|Could not get classes.\n";
+		const char *res = resString.c_str();
+		write(sockfd, res, strlen(res));
+		std::cerr << "ERROR: " << e.what() << endl;
+	}
+	
 }
