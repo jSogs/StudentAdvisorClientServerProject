@@ -40,6 +40,7 @@ again:
 			handleRegisterClasses(parts, sockfd);
 		else if (requestType == "BILL")
 			handlePayBill(parts, sockfd);
+		else if (requestType == "");
 		else if (requestType == "VIEW")
 			handleVieworDropClasses(parts, sockfd);
 		memset(req, 0, MAXLINE);
