@@ -15,6 +15,7 @@ void handleLogin(const vector<string> &, int);
 void handleRegisterClasses(const vector<string> &, int);
 void handleCheckGrades(const vector<string> &, int);
 void handlePayBill(const vector<string> &, int);
+void handleVieworDropClasses(const vector<string> &, int);
 
 void serverMenu(int sockfd)
 {
@@ -39,6 +40,8 @@ again:
 			handleRegisterClasses(parts, sockfd);
 		else if (requestType == "BILL")
 			handlePayBill(parts, sockfd);
+		else if (requestType == "VIEW")
+			handleVieworDropClasses(parts, sockfd);
 		memset(req, 0, MAXLINE);
 	}
 
@@ -167,48 +170,51 @@ void handleRegisterClasses(const vector<string> &parts, int sockfd)
 			exit(1);
 		}
 	}
-	string classChoices(req);						   // Convert the user choices from cstring to string
-	vector<string> choices = split(classChoices, " "); // Split to array
-	cout << req << endl;
-
-	// Connect to MongoDB
-	mongocxx::uri uri(MONGODB_CONNECTION_STRING);
-	mongocxx::client client{uri};
-
-	auto database = client["main"];		 // Access the database
-	auto collection = database["users"]; // Access a collection
-
-	cout << "\nSuccessfully connected to MongoDB!" << endl;
-
-	// Filter to find the user
-	bsoncxx::builder::stream::document filter_builder{};
-	filter_builder << "username" << username;
-
-	// Create the array of classes to push
-	bsoncxx::builder::basic::array class_array;
-
-	for (int i = 0; i < choices.size(); i++)
-	{
-		int choice = atoi(choices[i].c_str());
-		class_array.append(bsoncxx::builder::basic::make_document(
-			bsoncxx::builder::basic::kvp("name", classes[choice - 1])));
-		std::cout << "Added to class_array: { \"name\": \"" << classes[choice - 1] << "\" }" << std::endl;
-	}
-
-	// Print the array
-	std::cout << "Final Class Array: " << bsoncxx::to_json(class_array.view()) << std::endl;
-
-	// Update the classes field in the database
-	//$set operation replaces what was in the classes field previously
-	//.view() makes the document readable
-	bsoncxx::builder::stream::document update_builder{};
-	update_builder << "$set" << bsoncxx::builder::stream::open_document
-				   << "classes" << class_array.view()
-				   << bsoncxx::builder::stream::close_document;
-	// std::cout << "Update Query: " << bsoncxx::to_json(update_builder.view()) << std::endl;
-
 	try
 	{
+		string classChoices(req);						   // Convert the user choices from cstring to string
+		vector<string> choices = split(classChoices, " "); // Split to array
+		cout << req << endl;
+		int class_count = 0;
+
+		// Connect to MongoDB
+		mongocxx::uri uri(MONGODB_CONNECTION_STRING);
+		mongocxx::client client{uri};
+
+		auto database = client["main"];		 // Access the database
+		auto collection = database["users"]; // Access a collection
+
+		cout << "\nSuccessfully connected to MongoDB!" << endl;
+
+		// Filter to find the user
+		bsoncxx::builder::stream::document filter_builder{};
+		filter_builder << "username" << username;
+
+		// Create the array of classes to push
+		bsoncxx::builder::basic::array class_array;
+
+		for (int i = 0; i < choices.size(); i++)
+		{
+			int choice = atoi(choices[i].c_str());
+			class_array.append(bsoncxx::builder::basic::make_document(
+				bsoncxx::builder::basic::kvp("name", classes[choice - 1])));
+			cout << "Added to class_array: { \"name\": \"" << classes[choice - 1] << "\" }" << endl;
+			class_count++;
+		}
+
+		// Print the array
+		cout << "Final Class Array: " << bsoncxx::to_json(class_array.view()) << endl;
+		int bill = class_count * 300;
+
+		// Update the classes field in the database
+		//$set operation replaces what was in the classes field previously
+		//.view() makes the document readable
+		bsoncxx::builder::stream::document update_builder{};
+		update_builder << "$set" << bsoncxx::builder::stream::open_document
+					   << "classes" << class_array.view()
+					   << "bill" << bill
+					   << bsoncxx::builder::stream::close_document;
+		// std::cout << "Update Query: " << bsoncxx::to_json(update_builder.view()) << std::endl;
 		// Perform database update
 		auto result = collection.update_one(filter_builder.view(), update_builder.view());
 		if (result && result->modified_count() > 0)
@@ -413,26 +419,28 @@ void handlePayBill(const vector<string> &parts, int sockfd)
 			string amountPay(res2);
 			bill = bill - stoi(amountPay);
 
-			
 			// Filter to find the user
 			bsoncxx::builder::stream::document filter_builder{};
 			filter_builder << "username" << username;
 
 			bsoncxx::builder::stream::document update_builder{};
 			update_builder << "$set" << bsoncxx::builder::stream::open_document
-				   << "bill" << bill
-				   << bsoncxx::builder::stream::close_document;
+						   << "bill" << bill
+						   << bsoncxx::builder::stream::close_document;
 
 			// Update the bill for the user after pay
-			try {
+			try
+			{
 				auto result2 = collection.update_one(filter_builder.view(), update_builder.view());
-				if (result2) {
+				if (result2)
+				{
 					string resString = "SUCCESS|Pay completed.\n";
 					const char *res = resString.c_str();
 					write(sockfd, res, strlen(res));
 					cout << "Update Bill Amount successful.\n";
-				} 
-				else {
+				}
+				else
+				{
 					string resString = "FAILURE|Pay failed.\n";
 					const char *res = resString.c_str();
 					write(sockfd, res, strlen(res));
@@ -455,5 +463,135 @@ void handlePayBill(const vector<string> &parts, int sockfd)
 		const char *res = resString.c_str();
 		write(sockfd, res, strlen(res));
 		cout << "Account does not exist\n";
+	}
+}
+
+void handleVieworDropClasses(const vector<string> &parts, int sockfd)
+{
+	ssize_t n;
+	string username = parts[1]; // Get the user name
+	char req[MAXLINE];
+	string resString = "";
+
+	try
+	{
+		// Filter to find the user
+		bsoncxx::builder::stream::document filter_builder{};
+		filter_builder << "username" << username;
+
+		// Connect to MongoDB
+		mongocxx::uri uri(MONGODB_CONNECTION_STRING);
+		mongocxx::client client{uri};
+
+		auto database = client["main"];		 // Access the database
+		auto collection = database["users"]; // Access a collection
+
+		cout << "\nSuccessfully connected to MongoDB!" << endl;
+
+		// Get the user record from the database
+		auto result = collection.find_one(filter_builder.view());
+		if (!result)
+		{
+			// If could not find result, send FAILURE response to the client
+			cerr << "No user found for username: " << username << endl;
+			resString = "FAILURE|Could not get classes";
+			const char *res = resString.c_str();
+			write(sockfd, res, strlen(res));
+			return;
+		}
+		resString = "SUCCESS";
+		// Fetch the current classes
+		auto doc = *result;
+		auto current_classes = doc["classes"].get_array().value;
+
+		// Create response of all classes the user is currently taking
+		for (const auto &class_doc : current_classes)
+		{
+			resString += "|" + class_doc["name"].get_string().value.to_string();
+		}
+		const char *res = resString.c_str();
+		write(sockfd, res, strlen(res)); // Write to socket
+		memset(req, 0, MAXLINE);
+		while ((n = read(sockfd, req, MAXLINE)) <= 0)
+		{								 // Read from socket
+			if (n < 0 && errno == EINTR) // If process is interrupted retry
+				continue;
+			else if (n < 0)
+			{
+				printf("server: read error");
+				exit(1);
+			}
+		}
+		string reqString(req); // Convert request from cstring to string
+		int i = 1;
+		vector<string> dropClasses = split(reqString, " ");
+		set<string> choices(dropClasses.begin(), dropClasses.end()); // Create set of user choices of classes to drop
+
+		if (dropClasses[0] != "0")
+		{												  // If user choice is not 0, i.e user is dropping some classes
+			bsoncxx::builder::basic::array class_arrayAD; // Class array after dropping classes
+
+			// Iterate through classes and if the class was not dropped add to new array
+			for (const auto &class_doc : current_classes)
+			{
+				bool exists = choices.find(to_string(i)) != choices.end();
+				if (!exists)
+				{
+					cout << i << endl;
+					bsoncxx::builder::basic::document doc_builder;
+
+					// Always append the "name" field
+					doc_builder.append(bsoncxx::builder::basic::kvp(
+						"name", class_doc["name"].get_string().value.to_string()));
+
+					// Conditionally append the "grade" field if it exists
+					if (class_doc["grade"])
+					{
+						doc_builder.append(bsoncxx::builder::basic::kvp(
+							"grade", class_doc["grade"].get_string().value.to_string()));
+					}
+
+					// Append the document to the array
+					class_arrayAD.append(doc_builder.extract());
+				}
+				++i;
+			}
+			// Update the classes field in the database
+			bsoncxx::builder::stream::document update_builder{};
+			update_builder << "$set" << bsoncxx::builder::stream::open_document
+						   << "classes" << class_arrayAD.view()
+						   << bsoncxx::builder::stream::close_document;
+
+			std::cout << bsoncxx::to_json(update_builder.view()) << std::endl;
+
+			auto update_result = collection.update_one(filter_builder.view(), update_builder.view());
+			if (update_result && update_result->modified_count() > 0)
+			{
+				resString = "SUCCESS|You have dropped the classes";
+				const char *res = resString.c_str();
+				write(sockfd, res, strlen(res));
+			}
+			else
+			{
+				resString = "WARNING|You did not drop any class";
+				const char *res = resString.c_str();
+				write(sockfd, res, strlen(res));
+			}
+		}
+		else
+		{
+			resString = "SUCCESS|You have dropped the classes";
+			const char *res = resString.c_str();
+			write(sockfd, res, strlen(res));
+			return;
+		}
+	}
+	catch (const std::exception &e)
+	{
+		// Send FAILURE response to client
+		resString = "FAILURE|Could not view or drop classes";
+		const char *res = resString.c_str();
+		write(sockfd, res, strlen(res));
+		cerr << "Update error: " << e.what() << std::endl;
 	}
 }

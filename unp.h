@@ -11,6 +11,7 @@
 #include	<unistd.h>
 #include	<sys/wait.h>
 #include    <string>
+#include 	<set>
 #include    <iostream>
 #include    <vector>
 #define	LISTENQ		1024	/* 2nd argument to listen() */

@@ -7,6 +7,7 @@ void studentSignup(int);
 void checkGrades(int);
 void registerClasses(int);
 void payBills(int);
+void vieworDropClasses(int);
 
 string username, password, fullname;
 
@@ -28,7 +29,7 @@ void mainMenu(FILE *fp, int sockfd)
 	}
 	studentLogin(sockfd);
 
-	fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n", stdout);
+	fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. View or Drop Classes\n5. Exit\n", stdout);
 
 	while (fgets(choice, sizeof(choice), fp) != NULL)
 	{
@@ -46,12 +47,15 @@ void mainMenu(FILE *fp, int sockfd)
 			payBills(sockfd);
 			break;
 		case 4:
+			vieworDropClasses(sockfd);
+			break;
+		case 5:
 			exit(0);
 		default:
 			cout << "Invalid option.\n";
 			break;
 		}
-		fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. Exit\n", stdout);
+		fputs("What would you like to do?\n1. Register for classes\n2. Check my grades\n3. Pay my bill\n4. View or Drop Classes\n5. Exit\n", stdout);
 	}
 }
 
@@ -190,7 +194,7 @@ void registerClasses(int sockfd)
 		fputs("Available classes: ", stdout);
 		for (int i = 0; i < classes.size(); i++)
 		{
-			cout << i + 1 << ". " << classes[i] << "\t";
+			cout << i + 1 << ". " << classes[i] << "\n";
 		}
 		cout << "\nEnter the number (1-10) and a space between each class you want to register for: ";
 		fgets(choices, sizeof(choices), stdin);
@@ -221,8 +225,9 @@ void registerClasses(int sockfd)
 void payBills(int sockfd)
 {
 	bool hasPay = false;
-	do {
-		const char * req;
+	do
+	{
+		const char *req;
 		char res[MAXLINE];
 		string reqString = "BILL|" + username;
 		req = reqString.c_str();
@@ -234,7 +239,8 @@ void payBills(int sockfd)
 		}
 		string resString(res);
 		vector<string> parts = split(resString, "|");
-		if(parts[0] == "FAILURE") {
+		if (parts[0] == "FAILURE")
+		{
 			cout << parts[1];
 			return;
 		}
@@ -257,13 +263,74 @@ void payBills(int sockfd)
 		}
 		resString = res;
 		parts = split(resString, "|");
-		if(parts[0] == "FAILURE") {
+		if (parts[0] == "FAILURE")
+		{
 			cout << parts[1] << endl;
 			return;
 		}
-		else {
+		else
+		{
 			hasPay = true;
 			cout << parts[1] << endl;
 		}
-	} while(!hasPay);
+	} while (!hasPay);
+}
+
+void vieworDropClasses(int sockfd)
+{
+	bool hasViewed = false;
+	do
+	{
+		const char *req;
+		char res[MAXLINE];
+		char choices[21];
+		string reqString = "VIEW|" + username;
+		req = reqString.c_str();
+		write(sockfd, req, strlen(req));
+		memset(res, 0, MAXLINE);
+		if (read(sockfd, res, MAXLINE) == 0)
+		{ // read from socket
+			printf("str_cli: server terminated prematurely");
+			exit(1);
+		}
+		string resString(res);
+		vector<string> classes = split(resString, "|");
+		fputs("Available classes: \n", stdout);
+		for (int i = 1; i < classes.size(); i++)
+		{
+			cout << i << ". " << classes[i] << "\n";
+		}
+		if (classes.size() <= 1)
+		{
+			reqString = "0";
+			req = reqString.c_str();
+			write(sockfd, req, strlen(req));
+			return;
+		}
+		cout << "\nEnter the number of all classes you want to drop or 0 if you don't want to drop any:";
+		fgets(choices, sizeof(choices), stdin);
+		choices[strlen(choices) - 1] = '\0';
+		hasViewed = true;
+		write(sockfd, choices, strlen(choices));
+		memset(res, 0, MAXLINE);
+		if (read(sockfd, res, MAXLINE) == 0)
+		{ // read from socket
+			printf("str_cli: server terminated prematurely");
+			exit(1);
+		}
+		resString = *(new string(res));
+		vector<string> parts = split(resString, "|");
+		string signup = parts[0];
+		string msg = parts[1];
+		if (signup == "SUCCESS")
+		{
+			hasViewed = true;
+			cout << msg << endl;
+		}
+		else
+		{
+			cout << msg << endl;
+			continue;
+		}
+	} while (!hasViewed);
 }
