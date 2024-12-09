@@ -283,6 +283,14 @@ void handleCheckGrades(const vector<string> &parts, int sockfd)
 	auto doc = *result;
 	auto current_classes = doc["classes"].get_array().value;
 
+	if(current_classes.empty()){
+		// Handle empty array scenario
+		resString = "SUCCESS|No classes found for this user.";
+		const char* res = resString.c_str();
+		write(sockfd, res, strlen(res));
+		return;
+	}
+
 	// Check if any class already has a grade
 	bool has_grades = false;
 	for (const auto &class_doc : current_classes)

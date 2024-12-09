@@ -142,35 +142,31 @@ void studentLogin(int sockfd)
 void checkGrades(int sockfd)
 {
 	bool hasChecked = false;
-	do
+	const char *req;
+	char res[MAXLINE];
+	string reqString = "GRADES|" + username;
+	req = reqString.c_str();
+	write(sockfd, req, strlen(req));
+	memset(res, 0, MAXLINE);
+	if (read(sockfd, res, MAXLINE) == 0)
+	{ // read from socket
+		printf("str_cli: server terminated prematurely");
+		exit(1);
+	}
+	string resString(res);
+	resString = *(new string(res));
+	vector<string> parts = split(resString, "|");
+	string signup = parts[0];
+	string msg = parts[1];
+	if (signup == "SUCCESS")
 	{
-		const char *req;
-		char res[MAXLINE];
-		string reqString = "GRADES|" + username;
-		req = reqString.c_str();
-		write(sockfd, req, strlen(req));
-		memset(res, 0, MAXLINE);
-		if (read(sockfd, res, MAXLINE) == 0)
-		{ // read from socket
-			printf("str_cli: server terminated prematurely");
-			exit(1);
-		}
-		string resString(res);
-		resString = *(new string(res));
-		vector<string> parts = split(resString, "|");
-		string signup = parts[0];
-		string msg = parts[1];
-		if (signup == "SUCCESS")
-		{
-			hasChecked = true;
-			cout << msg << endl;
-		}
-		else
-		{
-			cout << msg << endl;
-			continue;
-		}
-	} while (!hasChecked);
+		hasChecked = true;
+		cout << msg << endl;
+	}
+	else
+	{
+		cout << msg << endl;
+	}
 }
 
 void registerClasses(int sockfd)
@@ -232,6 +228,7 @@ void payBills(int sockfd)
 		string reqString = "BILL|" + username;
 		req = reqString.c_str();
 		write(sockfd, req, strlen(req));
+		memset(res,0,MAXLINE);
 		if (read(sockfd, res, MAXLINE) == 0)
 		{ // read from socket
 			printf("str_cli: server terminated prematurely");
