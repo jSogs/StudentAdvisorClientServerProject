@@ -305,6 +305,7 @@ void vieworDropClasses(int sockfd)
 			reqString = "0";
 			req = reqString.c_str();
 			write(sockfd, req, strlen(req));
+			read(sockfd, res, MAXLINE);
 			return;
 		}
 		cout << "\nEnter the number of all classes you want to drop or 0 if you don't want to drop any:";
