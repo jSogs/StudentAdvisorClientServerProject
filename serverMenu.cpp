@@ -592,7 +592,7 @@ void handleVieworDropClasses(const vector<string> &parts, int sockfd)
 			}
 			else
 			{
-				resString = "WARNING|You did not drop any class";
+				resString = "WARNING|You did not drop any class\n";
 				const char *res = resString.c_str();
 				write(sockfd, res, strlen(res));
 			}
