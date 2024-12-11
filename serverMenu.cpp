@@ -10,13 +10,16 @@ using namespace std;
 mongocxx::instance instance{}; // mongodb singleton instance
 const string MONGODB_CONNECTION_STRING = "mongodb+srv://julianasogwa96:o5zKPuqoOnAup7PJ@cluster0.kl71a.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
+// Function Headers
 void handleSignup(const vector<string> &, int);
 void handleLogin(const vector<string> &, int);
 void handleRegisterClasses(const vector<string> &, int);
 void handleCheckGrades(const vector<string> &, int);
 void handlePayBill(const vector<string> &, int);
 void handleVieworDropClasses(const vector<string> &, int);
+//
 
+// Server processing request from client
 void serverMenu(int sockfd)
 {
 	srand(time(NULL));
@@ -54,6 +57,7 @@ again:
 	}
 }
 
+// Handling Sign up Request from client
 void handleSignup(const vector<string> &parts, int sockfd)
 {
 	// Get user details
@@ -101,8 +105,10 @@ void handleSignup(const vector<string> &parts, int sockfd)
 	}
 }
 
+// Handle Login request from client
 void handleLogin(const vector<string> &parts, int sockfd)
 {
+	// Get user details
 	string role = parts[1];
 	string username = parts[2];
 	string password = parts[3];
@@ -151,6 +157,7 @@ void handleLogin(const vector<string> &parts, int sockfd)
 	}
 }
 
+// Handle Class Register Request from client
 void handleRegisterClasses(const vector<string> &parts, int sockfd)
 {
 	ssize_t n;
@@ -249,6 +256,7 @@ void handleRegisterClasses(const vector<string> &parts, int sockfd)
 	}
 }
 
+// Handle Check Grade request from client
 void handleCheckGrades(const vector<string> &parts, int sockfd)
 {
 	string username = parts[1]; // Get username
@@ -311,7 +319,7 @@ void handleCheckGrades(const vector<string> &parts, int sockfd)
 		for (const auto &class_doc : current_classes)
 		{
 			string grade = generateGrade(); // Call generate random grade function
-			// Make doucment and add to builder
+			// Make document and add to builder
 			class_array.append(bsoncxx::builder::basic::make_document(
 				bsoncxx::builder::basic::kvp("name", class_doc["name"].get_string().value.to_string()), // have to use the whole .string stuff cuz it initially returns a BSON type
 				bsoncxx::builder::basic::kvp("grade", grade)));
@@ -388,6 +396,7 @@ void handleCheckGrades(const vector<string> &parts, int sockfd)
 	}
 }
 
+// Handle Pay bill request from client
 void handlePayBill(const vector<string> &parts, int sockfd)
 {
 	string username = parts[1];
@@ -474,6 +483,8 @@ void handlePayBill(const vector<string> &parts, int sockfd)
 	}
 }
 
+
+// Handle view or drop class request from client
 void handleVieworDropClasses(const vector<string> &parts, int sockfd)
 {
 	ssize_t n;
@@ -575,7 +586,7 @@ void handleVieworDropClasses(const vector<string> &parts, int sockfd)
 			auto update_result = collection.update_one(filter_builder.view(), update_builder.view());
 			if (update_result && update_result->modified_count() > 0)
 			{
-				resString = "SUCCESS|You have dropped the classes";
+				resString = "SUCCESS|You have dropped the classes\n";
 				const char *res = resString.c_str();
 				write(sockfd, res, strlen(res));
 			}
@@ -588,7 +599,7 @@ void handleVieworDropClasses(const vector<string> &parts, int sockfd)
 		}
 		else
 		{
-			resString = "SUCCESS|You have dropped the classes";
+			resString = "SUCCESS|You have dropped the classes\n";
 			const char *res = resString.c_str();
 			write(sockfd, res, strlen(res));
 			return;
