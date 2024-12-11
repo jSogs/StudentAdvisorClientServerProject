@@ -2,9 +2,21 @@
 A TCP Client Server Project
 
 How to connect mongodb:
-- First follow the steps in this link: https://www.mongodb.com/docs/languages/cpp/cpp-driver/current/installation/
+- First follow the steps in this link: https://www.mongodb.com/docs/languages/cpp/cpp-driver/current/installation/ or do this:
 
-- Choose Mac or Windows depending on your device
+- Run the following commands:
+curl -OL https://github.com/mongodb/mongo-cxx-driver/releases/download/r4.0.0/mongo-cxx-driver-r4.0.0.tar.gz
+
+tar -xzf mongo-cxx-driver-r4.0.0.tar.gz
+
+cd mongo-cxx-driver-r4.0.0/build
+
+cmake ..                                \
+    -DCMAKE_BUILD_TYPE=Release          \
+    -DCMAKE_CXX_STANDARD=17
+
+cmake --build .
+sudo cmake --build . --target install
 
 - After this, run make
 

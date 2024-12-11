@@ -145,7 +145,7 @@ void studentLogin(int sockfd)
 		if (signin == "SUCCESS")
 		{
 			signedIn = true;
-			cout << msg << endl;
+			cout << "\n" << msg << endl;
 		}
 		else
 		{
